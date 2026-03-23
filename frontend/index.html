@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Student Management System</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --primary:#0f3460;--accent:#e94560;--bg:#f0f2f5;
+    --card:#fff;--text:#1a1a2e;--muted:#6b7280;--border:#e5e7eb;
+    --success:#22c55e;--danger:#ef4444;--info:#3b82f6;--purple:#a855f7;--orange:#f97316;
+  }
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  /* ── NAVBAR ── */
+  nav{
+    background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);
+    height:60px;padding:0 2rem;
+    display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:100;
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand-icon{
+    width:36px;height:36px;border-radius:10px;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .brand-icon svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2.5}
+  .brand-name{color:#fff;font-size:18px;font-weight:700;letter-spacing:.5px}
+  .brand-name span{color:var(--accent)}
+  .nav-right{display:flex;align-items:center;gap:16px}
+  .pill{
+    display:flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:20px;padding:5px 12px;
+    font-size:12px;color:#a8b2c1;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:#4ade80}
+  .dot.offline{background:var(--danger)}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+  .dot.connecting{animation:blink 1.2s infinite}
+
+  /* ── STATS ── */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:24px 2rem 0}
+  .stat{
+    background:var(--card);border-radius:14px;padding:20px;
+    border-left:4px solid;
+    box-shadow:0 1px 4px rgba(0,0,0,.06);
+    transition:transform .15s;
+  }
+  .stat:hover{transform:translateY(-2px)}
+  .stat.blue{border-color:var(--info)}
+  .stat.green{border-color:var(--success)}
+  .stat.purple{border-color:var(--purple)}
+  .stat.orange{border-color:var(--orange)}
+  .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+  .stat-num{font-size:30px;font-weight:700;line-height:1}
+  .stat-sub{font-size:11px;color:#9ca3af;margin-top:6px}
+
+  /* ── LAYOUT ── */
+  .layout{display:grid;grid-template-columns:1fr 360px;gap:20px;padding:20px 2rem 2rem}
+
+  /* ── CARD ── */
+  .card{background:var(--card);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
+  .card-head{
+    padding:14px 20px;border-bottom:1px solid #f3f4f6;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  }
+  .card-title{font-size:15px;font-weight:600}
+
+  /* ── SEARCH ── */
+  .search{
+    display:flex;align-items:center;gap:8px;
+    background:#f9fafb;border:1px solid var(--border);
+    border-radius:8px;padding:6px 12px;
+  }
+  .search input{border:none;background:transparent;outline:none;font-size:13px;width:190px;color:var(--text)}
+
+  /* ── TABLE ── */
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{
+    background:#f9fafb;padding:10px 16px;text-align:left;
+    font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--muted);border-bottom:1px solid #f3f4f6;font-weight:600;
+  }
+  tbody tr{border-bottom:1px solid #f9fafb;transition:background .12s}
+  tbody tr:hover{background:#fafafa}
+  td{padding:11px 16px;vertical-align:middle}
+
+  .avatar{
+    width:34px;height:34px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;margin-right:9px;vertical-align:middle;flex-shrink:0;
+  }
+  .name-cell{display:flex;align-items:center}
+  .name-info strong{display:block;font-size:13px}
+  .name-info span{font-size:11px;color:var(--muted)}
+
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+  .b-cs{background:#eff6ff;color:#1d4ed8}
+  .b-ds{background:#f0fdf4;color:#15803d}
+  .b-dv{background:#fdf4ff;color:#7e22ce}
+  .b-ma{background:#fff7ed;color:#c2410c}
+  .b-ph{background:#f0fdfa;color:#0f766e}
+  .b-bu{background:#fefce8;color:#a16207}
+  .b-xx{background:#f9fafb;color:#374151}
+
+  .grade-pill{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:28px;height:28px;border-radius:50%;
+    background:#f3f4f6;font-size:12px;font-weight:700;color:var(--text);
+  }
+
+  .act-btn{
+    border:none;background:transparent;cursor:pointer;
+    padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;
+    transition:background .12s;
+  }
+  .act-btn.edit{color:var(--info)}
+  .act-btn.edit:hover{background:#eff6ff}
+  .act-btn.del{color:var(--danger)}
+  .act-btn.del:hover{background:#fef2f2}
+
+  .empty{text-align:center;padding:52px 20px;color:#9ca3af}
+  .empty svg{width:48px;height:48px;margin-bottom:12px;opacity:.3}
+  .empty p{font-size:13px}
+
+  /* ── SIDEBAR ── */
+  .sidebar{display:flex;flex-direction:column;gap:16px}
+
+  .form-card{background:var(--card);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:20px}
+  .form-card h3{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .form-card h3 .icon{
+    width:28px;height:28px;border-radius:8px;
+    background:linear-gradient(135deg,#1a1a2e,#0f3460);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .form-card h3 .icon svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5}
+
+  .fg{margin-bottom:11px}
+  .fg label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .fg input,.fg select{
+    width:100%;padding:8px 12px;
+    border:1px solid var(--border);border-radius:8px;
+    font-size:13px;color:var(--text);outline:none;
+    transition:border .15s,box-shadow .15s;background:#fff;
+  }
+  .fg input:focus,.fg select:focus{border-color:var(--info);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+  .fg input.err{border-color:var(--danger)}
+  .fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  .btn{
+    width:100%;padding:10px;border:none;border-radius:9px;
+    font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;
+  }
+  .btn-save{
+    background:linear-gradient(135deg,#1a1a2e,#0f3460);
+    color:#fff;margin-bottom:8px;
+  }
+  .btn-save:hover{opacity:.88;transform:translateY(-1px)}
+  .btn-save:active{transform:translateY(0)}
+  .btn-clear{background:#f9fafb;color:#374151;border:1px solid var(--border);font-size:13px}
+  .btn-clear:hover{background:#f3f4f6}
+
+  /* ── FILTER CARD ── */
+  .filter-card{background:var(--card);border-radius:14px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .filter-card h4{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+  .filter-pills{display:flex;flex-wrap:wrap;gap:7px}
+  .fpill{
+    padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;
+    border:1px solid var(--border);background:#f9fafb;color:var(--muted);
+    transition:all .12s;
+  }
+  .fpill:hover{border-color:var(--info);color:var(--info);background:#eff6ff}
+  .fpill.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+  /* ── TOAST ── */
+  .toast{
+    position:fixed;bottom:24px;right:24px;z-index:9999;
+    display:flex;align-items:center;gap:10px;
+    padding:12px 18px;border-radius:10px;
+    font-size:13px;font-weight:500;color:#fff;
+    transform:translateY(80px);opacity:0;transition:all .3s;
+    max-width:320px;
+  }
+  .toast.show{transform:translateY(0);opacity:1}
+  .toast.ok{background:#1a1a2e;border-left:4px solid var(--success)}
+  .toast.err{background:#1a1a2e;border-left:4px solid var(--danger)}
+  .toast svg{flex-shrink:0;width:16px;height:16px}
+
+  /* ── LOADING SKELETON ── */
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  .skel{
+    background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%);
+    background-size:200% 100%;
+    animation:shimmer 1.4s infinite;
+    border-radius:6px;height:14px;
+  }
+
+  /* ── API BAR ── */
+  .api-bar{
+    background:#1a1a2e;padding:10px 2rem;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .api-bar label{color:#a8b2c1;font-size:12px;white-space:nowrap}
+  .api-bar input{
+    flex:1;min-width:220px;background:#0f3460;
+    border:1px solid #374151;color:#fff;
+    padding:6px 12px;border-radius:7px;font-size:12px;outline:none;
+  }
+  .api-bar input:focus{border-color:#3b82f6}
+  .api-bar button{
+    background:var(--accent);color:#fff;border:none;
+    padding:7px 18px;border-radius:7px;font-size:12px;
+    font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .15s;
+  }
+  .api-bar button:hover{opacity:.88}
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:960px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .layout{grid-template-columns:1fr}
+  }
+  @media(max-width:520px){
+    .stats{grid-template-columns:1fr 1fr}
+    nav{padding:0 1rem}
+    .stats,.layout{padding-left:1rem;padding-right:1rem}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="brand-name">Student<span>MS</span></div>
+  </div>
+  <div class="nav-right">
+    <div class="pill">
+      <div class="dot connecting" id="statusDot"></div>
+      <span id="statusText">Connecting…</span>
+    </div>
+    <div class="pill" style="color:#fff;font-weight:600;font-size:13px" id="buildBadge">
+      DevOps Project
+    </div>
+  </div>
+</nav>
+
+<!-- API BAR -->
+<div class="api-bar">
+  <label>API endpoint:</label>
+  <input type="text" id="apiUrl" value="http://YOUR-EC2-3-IP:30080" placeholder="http://your-ec2-ip:30080"/>
+  <button onclick="loadStudents()">Connect</button>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat blue">
+    <div class="stat-label">Total Students</div>
+    <div class="stat-num" id="totalCount">—</div>
+    <div class="stat-sub">Enrolled in system</div>
+  </div>
+  <div class="stat green">
+    <div class="stat-label">Active Courses</div>
+    <div class="stat-num" id="courseCount">—</div>
+    <div class="stat-sub">Unique courses</div>
+  </div>
+  <div class="stat purple">
+    <div class="stat-label">Latest Student</div>
+    <div class="stat-num" id="latestStudent" style="font-size:15px;padding-top:8px">—</div>
+    <div class="stat-sub">Most recently added</div>
+  </div>
+  <div class="stat orange">
+    <div class="stat-label">API Health</div>
+    <div class="stat-num" id="apiStatus" style="font-size:16px;padding-top:8px">—</div>
+    <div class="stat-sub">Live status</div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- TABLE -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Student Records</div>
+      <div class="search">
+        <svg width="14" height="14" fill="none" stroke="#9ca3af" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Search by name…" oninput="handleSearch(this.value)"/>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Email</th>
+            <th>Course</th>
+            <th>Grade</th>
+            <th>Phone</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentTable">
+          <tr><td colspan="6">
+            <div class="empty">
+              <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M15 19a3 3 0 1 1-6 0m9-10H6m13.2 4.8A9 9 0 1 1 3 12"/></svg>
+              <p>Enter your API URL above and click <strong>Connect</strong></p>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- FORM -->
+    <div class="form-card">
+      <h3>
+        <div class="icon">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+        <span id="formTitle">Add New Student</span>
+      </h3>
+      <input type="hidden" id="editId"/>
+      <div class="fr">
+        <div class="fg">
+          <label>First Name</label>
+          <input type="text" id="firstName" placeholder="John"/>
+        </div>
+        <div class="fg">
+          <label>Last Name</label>
+          <input type="text" id="lastName" placeholder="Doe"/>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="john@example.com"/>
+      </div>
+      <div class="fr">
+        <div class="fg">
+          <label>Course</label>
+          <select id="course">
+            <option value="">Select…</option>
+            <option>Computer Science</option>
+            <option>Data Science</option>
+            <option>DevOps Engineering</option>
+            <option>Mathematics</option>
+            <option>Physics</option>
+            <option>Business</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Grade</label>
+          <select id="grade">
+            <option value="">—</option>
+            <option>1</option><option>2</option><option>3</option>
+            <option>4</option><option>5</option><option>6</option>
+            <option>7</option><option>8</option><option>9</option>
+            <option>10</option><option>11</option><option>12</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Phone Number</label>
+        <input type="text" id="phone" placeholder="9876543210"/>
+      </div>
+      <button class="btn btn-save" onclick="saveStudent()">Save Student</button>
+      <button class="btn btn-clear" onclick="resetForm()">Clear Form</button>
+    </div>
+
+    <!-- FILTER -->
+    <div class="filter-card">
+      <h4>Filter by Course</h4>
+      <div class="filter-pills">
+        <div class="fpill active" onclick="filterByCourse('',this)">All</div>
+        <div class="fpill" onclick="filterByCourse('Computer Science',this)">CS</div>
+        <div class="fpill" onclick="filterByCourse('Data Science',this)">Data Science</div>
+        <div class="fpill" onclick="filterByCourse('DevOps Engineering',this)">DevOps</div>
+        <div class="fpill" onclick="filterByCourse('Mathematics',this)">Math</div>
+        <div class="fpill" onclick="filterByCourse('Physics',this)">Physics</div>
+        <div class="fpill" onclick="filterByCourse('Business',this)">Business</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <svg id="toastIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+  let allStudents = [];
+
+  const avatarPalette = [
+    {bg:'#eff6ff',color:'#1d4ed8'},{bg:'#f0fdf4',color:'#15803d'},
+    {bg:'#fdf4ff',color:'#7e22ce'},{bg:'#fff7ed',color:'#c2410c'},
+    {bg:'#fef2f2',color:'#b91c1c'},{bg:'#f0fdfa',color:'#0f766e'},
+    {bg:'#fefce8',color:'#a16207'},{bg:'#f5f3ff',color:'#6d28d9'},
+  ];
+
+  const badgeMap = {
+    'Computer Science':'b-cs','Data Science':'b-ds',
+    'DevOps Engineering':'b-dv','Mathematics':'b-ma',
+    'Physics':'b-ph','Business':'b-bu'
+  };
+
+  function api(){ return document.getElementById('apiUrl').value.replace(/\/$/,''); }
+
+  function avatar(name, i){
+    const c = avatarPalette[i % avatarPalette.length];
+    const ini = name.trim().split(' ').map(n=>n[0]||'').join('').toUpperCase().slice(0,2);
+    return `<div class="avatar" style="background:${c.bg};color:${c.color}">${ini}</div>`;
+  }
+
+  function badge(course){
+    return `<span class="badge ${badgeMap[course]||'b-xx'}">${course||'—'}</span>`;
+  }
+
+  function renderTable(students){
+    const tb = document.getElementById('studentTable');
+    if(!students.length){
+      tb.innerHTML=`<tr><td colspan="6"><div class="empty">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+        <p>No students found</p></div></td></tr>`;
+      return;
+    }
+    tb.innerHTML = students.map((s,i)=>`
+      <tr>
+        <td>
+          <div class="name-cell">
+            ${avatar(s.firstName+' '+s.lastName,i)}
+            <div class="name-info">
+              <strong>${s.firstName} ${s.lastName}</strong>
+              <span>#${s.id}</span>
+            </div>
+          </div>
+        </td>
+        <td style="color:var(--muted)">${s.email}</td>
+        <td>${badge(s.course)}</td>
+        <td><div class="grade-pill">${s.grade||'—'}</div></td>
+        <td style="color:var(--muted)">${s.phoneNumber||'—'}</td>
+        <td>
+          <button class="act-btn edit" onclick="editStudent(${s.id})">Edit</button>
+          <button class="act-btn del" onclick="deleteStudent(${s.id})">Delete</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function updateStats(students){
+    document.getElementById('totalCount').textContent = students.length;
+    document.getElementById('courseCount').textContent = new Set(students.map(s=>s.course).filter(Boolean)).size;
+    const last = students[students.length-1];
+    document.getElementById('latestStudent').textContent = last ? `${last.firstName} ${last.lastName}` : '—';
+  }
+
+  function setStatus(state){
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    dot.className = 'dot ' + (state==='online'?'':'offline');
+    txt.textContent = state==='online' ? 'API Connected' : state==='connecting' ? 'Connecting…' : 'Disconnected';
+  }
+
+  async function loadStudents(){
+    setStatus('connecting');
+    try{
+      const r = await fetch(`${api()}/api/students`);
+      const d = await r.json();
+      if(d.success){
+        allStudents = d.data;
+        renderTable(allStudents);
+        updateStats(allStudents);
+        setStatus('online');
+        checkHealth();
+      }
+    } catch(e){
+      setStatus('offline');
+      document.getElementById('studentTable').innerHTML=`<tr><td colspan="6">
+        <div class="empty">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          <p>Cannot reach API. Check the URL and try again.</p>
+        </div>
+      </td></tr>`;
+    }
+  }
+
+  async function checkHealth(){
+    try{
+      const r = await fetch(`${api()}/api/students/health`);
+      const d = await r.json();
+      const el = document.getElementById('apiStatus');
+      el.textContent = d.success ? 'Online' : 'Error';
+      el.style.color = d.success ? '#22c55e' : '#ef4444';
+    } catch(e){
+      document.getElementById('apiStatus').textContent='Offline';
+      document.getElementById('apiStatus').style.color='#ef4444';
+    }
+  }
+
+  async function saveStudent(){
+    const id = document.getElementById('editId').value;
+    const fields = ['firstName','lastName','email','course'];
+    let valid = true;
+    fields.forEach(f=>{
+      const el = document.getElementById(f);
+      if(!el.value.trim()){ el.classList.add('err'); valid=false; }
+      else el.classList.remove('err');
+    });
+    if(!valid){ showToast('Please fill all required fields','err'); return; }
+
+    const body = {
+      firstName:   document.getElementById('firstName').value.trim(),
+      lastName:    document.getElementById('lastName').value.trim(),
+      email:       document.getElementById('email').value.trim(),
+      course:      document.getElementById('course').value,
+      grade:       parseInt(document.getElementById('grade').value)||null,
+      phoneNumber: document.getElementById('phone').value.trim()
+    };
+
+    try{
+      const r = await fetch(
+        id ? `${api()}/api/students/${id}` : `${api()}/api/students`,
+        { method: id?'PUT':'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
+      );
+      const d = await r.json();
+      if(d.success){ showToast(id?'Student updated successfully!':'Student added successfully!','ok'); resetForm(); loadStudents(); }
+      else showToast(d.message||'Something went wrong','err');
+    } catch(e){ showToast('API error: '+e.message,'err'); }
+  }
+
+  function editStudent(id){
+    const s = allStudents.find(s=>s.id===id);
+    if(!s) return;
+    document.getElementById('editId').value=s.id;
+    document.getElementById('firstName').value=s.firstName;
+    document.getElementById('lastName').value=s.lastName;
+    document.getElementById('email').value=s.email;
+    document.getElementById('course').value=s.course;
+    document.getElementById('grade').value=s.grade||'';
+    document.getElementById('phone').value=s.phoneNumber||'';
+    document.getElementById('formTitle').textContent='Edit Student';
+    document.querySelector('.form-card').scrollIntoView({behavior:'smooth'});
+  }
+
+  async function deleteStudent(id){
+    if(!confirm('Delete this student? This cannot be undone.')) return;
+    try{
+      const r = await fetch(`${api()}/api/students/${id}`,{method:'DELETE'});
+      const d = await r.json();
+      if(d.success){ showToast('Student deleted','ok'); loadStudents(); }
+    } catch(e){ showToast('Delete failed','err'); }
+  }
+
+  function resetForm(){
+    ['editId','firstName','lastName','email','phone'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('course').value='';
+    document.getElementById('grade').value='';
+    document.getElementById('formTitle').textContent='Add New Student';
+    document.querySelectorAll('.fg input,.fg select').forEach(el=>el.classList.remove('err'));
+  }
+
+  async function handleSearch(name){
+    if(!name.trim()){ renderTable(allStudents); return; }
+    try{
+      const r = await fetch(`${api()}/api/students/search?name=${encodeURIComponent(name)}`);
+      const d = await r.json();
+      if(d.success) renderTable(d.data);
+    } catch(e){
+      renderTable(allStudents.filter(s=>
+        (s.firstName+' '+s.lastName).toLowerCase().includes(name.toLowerCase())
+      ));
+    }
+  }
+
+  async function filterByCourse(course, el){
+    document.querySelectorAll('.fpill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('searchInput').value='';
+    if(!course){ renderTable(allStudents); return; }
+    try{
+      const r = await fetch(`${api()}/api/students/course/${encodeURIComponent(course)}`);
+      const d = await r.json();
+      if(d.success) renderTable(d.data);
+    } catch(e){
+      renderTable(allStudents.filter(s=>s.course===course));
+    }
+  }
+
+  let toastTimer;
+  function showToast(msg, type){
+    const t=document.getElementById('toast');
+    const icon=document.getElementById('toastIcon');
+    document.getElementById('toastMsg').textContent=msg;
+    icon.innerHTML = type==='ok'
+      ? '<polyline points="20 6 9 17 4 12"/>'
+      : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    t.className=`toast ${type} show`;
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>t.className='toast',3200);
+  }
+</script>
+</body>
+</html>

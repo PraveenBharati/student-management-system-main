@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: student-app-config
+  namespace: student-app
+data:
+  DB_URL: "jdbc:mysql://mysql-service:3306/studentdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8080"

@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: student-management
+  namespace: argocd
+spec:
+  project: default
+
+  # Where to pull the K8s manifests from (your GitHub repo)
+  source:
+    repoURL: https://github.com/PraveenBharati/student-management-system.git
+    targetRevision: main
+    path: k8s   # ArgoCD watches only this folder
+
+  # Where to deploy (your KIND cluster)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: student-app
+
+  syncPolicy:
+    automated:
+      prune: true      # Delete resources removed from Git
+      selfHeal: true   # Auto fix if someone manually changes cluster
+    syncOptions:
+      - CreateNamespace=true
