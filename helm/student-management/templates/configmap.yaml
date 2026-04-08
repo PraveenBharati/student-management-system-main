@@ -3,8 +3,6 @@ kind: ConfigMap
 metadata:
   name: student-app-config
   namespace: {{ .Values.namespace.name }}
-  labels:
-    {{- include "student-management.labels" . | nindent 4 }}
 data:
   DB_URL: {{ .Values.config.dbUrl | quote }}
   SPRING_PROFILES_ACTIVE: {{ .Values.config.springProfilesActive | quote }}
