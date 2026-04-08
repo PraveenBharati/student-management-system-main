@@ -4,4 +4,4 @@ metadata:
   name: {{ .Values.namespace.name }}
   labels:
     app: student-management
-    {{- include "student-management.labels" . | nindent 4 }}
+  
