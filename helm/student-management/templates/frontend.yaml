@@ -1,0 +1,78 @@
+# ── Frontend Nginx ConfigMap ───────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-management.labels" . | nindent 4 }}
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        root /usr/share/nginx/html;
+        index index.html;
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+---
+# ── Frontend Deployment ────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.frontend.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-management.frontendLabels" . | nindent 4 }}
+    {{- include "student-management.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "student-management.frontendLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "student-management.frontendLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Values.frontend.name }}
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.frontend.service.targetPort }}
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+      volumes:
+        - name: html
+          configMap:
+            name: frontend-html
+        - name: nginx-conf
+          configMap:
+            name: frontend-config
+            items:
+              - key: nginx.conf
+                path: default.conf
+---
+# ── Frontend Service ───────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-management.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  selector:
+    {{- include "student-management.frontendLabels" . | nindent 4 }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: {{ .Values.frontend.service.targetPort }}
+      nodePort: {{ .Values.frontend.service.nodePort }}

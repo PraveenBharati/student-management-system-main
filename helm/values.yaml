@@ -1,0 +1,135 @@
+# ============================================================
+# values.yaml — Single source of truth for all configuration
+# In production, override sensitive values via:
+#   helm upgrade ... --set secret.dbPassword=xxx
+#   or use an external secrets manager (AWS Secrets Manager / Vault)
+# ============================================================
+
+# ── Namespace ─────────────────────────────────────────────
+namespace:
+  name: student-app
+
+# ── Backend (Spring Boot) ──────────────────────────────────
+backend:
+  name: student-app
+  replicaCount: 3
+
+  image:
+    repository: 992382828560.dkr.ecr.us-east-1.amazonaws.com/student-management
+    tag: "6"           # Jenkins will override this: --set backend.image.tag=<build-number>
+    pullPolicy: IfNotPresent
+
+  imagePullSecrets:
+    - name: ecr-secret   # Created separately via kubectl (see README)
+
+  service:
+    type: NodePort
+    port: 8080
+    targetPort: 8080
+    nodePort: 30080
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  strategy:
+    type: RollingUpdate
+    maxSurge: 1
+    maxUnavailable: 0
+
+  livenessProbe:
+    path: /actuator/health
+    port: 8080
+    initialDelaySeconds: 60
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    path: /actuator/health
+    port: 8080
+    initialDelaySeconds: 40
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Frontend (Nginx) ───────────────────────────────────────
+frontend:
+  name: frontend
+  replicaCount: 1
+
+  image:
+    repository: nginx
+    tag: alpine
+    pullPolicy: IfNotPresent
+
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 80
+    nodePort: 30090
+
+  resources:
+    requests:
+      memory: "32Mi"
+      cpu: "50m"
+    limits:
+      memory: "64Mi"
+      cpu: "100m"
+
+# ── MySQL ──────────────────────────────────────────────────
+mysql:
+  name: mysql
+  replicaCount: 1
+
+  image:
+    repository: mysql
+    tag: "8.0"
+    pullPolicy: IfNotPresent
+
+  database: studentdb
+
+  service:
+    type: ClusterIP
+    port: 3306
+    targetPort: 3306
+
+  storage:
+    size: 1Gi
+    accessMode: ReadWriteOnce
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+
+  readinessProbe:
+    initialDelaySeconds: 20
+    periodSeconds: 5
+
+# ── ConfigMap (App Config) ─────────────────────────────────
+config:
+  dbUrl: "jdbc:mysql://mysql-service:3306/studentdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+  springProfilesActive: "prod"
+  serverPort: "8080"
+
+# ── Secrets ────────────────────────────────────────────────
+# WARNING: Do NOT commit real passwords to Git.
+# In production, pass via:
+#   helm upgrade ... --set secret.dbPassword=<real-password>
+#   OR use external-secrets / Vault integration
+secret:
+  dbUsername: root
+  dbPassword: "CHANGE_ME_IN_PRODUCTION"   # Override at deploy time

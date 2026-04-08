@@ -1,0 +1,13 @@
+apiVersion: v2
+name: student-management
+description: A production-ready Helm chart for Student Management System
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: PraveenBharati
+keywords:
+  - student
+  - management
+  - spring-boot
+  - mysql

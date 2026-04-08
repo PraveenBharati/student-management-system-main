@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: student-management
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/PraveenBharati/student-management-system.git
+    targetRevision: main
+    path: helm/student-management   # Points to the Helm chart folder
+
+    # ── Helm-specific config ───────────────────────────────
+    helm:
+      releaseName: student-management
+      valueFiles:
+        - values.yaml
+      # Production overrides — set real secrets here or via a sealed-secrets file
+      # parameters:
+      #   - name: backend.image.tag
+      #     value: "LATEST_BUILD_TAG"   # Jenkins updates this
+      #   - name: secret.dbPassword
+      #     value: "REAL_PASSWORD"      # Use Vault / AWS Secrets Manager instead
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: student-app
+
+  syncPolicy:
+    automated:
+      prune: true       # Delete resources removed from Git
+      selfHeal: true    # Auto-fix manual cluster changes
+    syncOptions:
+      - CreateNamespace=true

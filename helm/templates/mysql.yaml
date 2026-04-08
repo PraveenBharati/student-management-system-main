@@ -1,0 +1,94 @@
+# ── MySQL PersistentVolumeClaim ────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-management.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.mysql.storage.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.mysql.storage.size }}
+---
+# ── MySQL Deployment ───────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.mysql.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-management.mysqlLabels" . | nindent 4 }}
+    {{- include "student-management.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.mysql.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "student-management.mysqlLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate   # Required for stateful workloads with PVC
+  template:
+    metadata:
+      labels:
+        {{- include "student-management.mysqlLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Values.mysql.name }}
+          image: "{{ .Values.mysql.image.repository }}:{{ .Values.mysql.image.tag }}"
+          imagePullPolicy: {{ .Values.mysql.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.mysql.service.targetPort }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: student-app-secret
+                  key: DB_PASSWORD
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.database | quote }}
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+          resources:
+            {{- toYaml .Values.mysql.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - "-h"
+                - "localhost"
+            initialDelaySeconds: {{ .Values.mysql.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.mysql.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.mysql.livenessProbe.timeoutSeconds }}
+          readinessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - "-h"
+                - "localhost"
+            initialDelaySeconds: {{ .Values.mysql.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.mysql.readinessProbe.periodSeconds }}
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+---
+# ── MySQL Service ──────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "student-management.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.mysql.service.type }}
+  selector:
+    {{- include "student-management.mysqlLabels" . | nindent 4 }}
+  ports:
+    - port: {{ .Values.mysql.service.port }}
+      targetPort: {{ .Values.mysql.service.targetPort }}
