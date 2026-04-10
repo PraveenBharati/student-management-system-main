@@ -3,12 +3,12 @@ pipeline {
     
  environment {
         // AWS settings - set these in Jenkins credentials
-       // AWS_ACCOUNT_ID     = credentials('aws-account-id')
-      //  AWS_REGION         = 'us-east-1'
-     //   ECR_REPO_NAME      = 'student-management'
-      //  ECR_REGISTRY       = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-      //  IMAGE_NAME         = "${ECR_REGISTRY}/${ECR_REPO_NAME}"
-   //     IMAGE_TAG          = "${BUILD_NUMBER}"
+        AWS_ACCOUNT_ID     = credentials('aws-account-id')
+        AWS_REGION         = 'us-east-1'
+        ECR_REPO_NAME      = 'student-management'
+        ECR_REGISTRY       = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        IMAGE_NAME         = "${ECR_REGISTRY}/${ECR_REPO_NAME}"
+        IMAGE_TAG          = "${BUILD_NUMBER}"
 
         // SonarQube settings
         SONAR_PROJECT_KEY  = 'student-management'
@@ -65,6 +65,60 @@ stages {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
+    stage('Build Docker Image') {
+            steps {
+                echo '===== Building Docker image ====='
+                sh '''
+                    docker build \
+                      -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                      -t ${IMAGE_NAME}:latest \
+                      .
+                '''
+            }
+        }
+
+        stage('Trivy Security Scan') {
+            steps {
+                echo '===== Scanning Docker image for vulnerabilities with Trivy ====='
+                sh '''
+                    trivy image \
+                      --exit-code 0 \
+                      --severity HIGH,CRITICAL \
+                      --format table \
+                      ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+                // Save scan report as artifact
+                sh '''
+                    trivy image \
+                      --exit-code 0 \
+                      --severity HIGH,CRITICAL \
+                      --format json \
+                      --output trivy-report.json \
+                      ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+                }
+            }
+        }
+     stage('Push to AWS ECR') {
+            steps {
+                echo '===== Pushing image to AWS ECR ====='
+                withAWS(credentials: 'aws-credentials', region: "${AWS_REGION}") {
+                    sh '''
+                        aws ecr get-login-password --region ${AWS_REGION} | \
+                          docker login --username AWS --password-stdin ${ECR_REGISTRY}
+
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_NAME}:latest
+                    '''
+                }
+            }
+        }
+
+
 
 }
 }
