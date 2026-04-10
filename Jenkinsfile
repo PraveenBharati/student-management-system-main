@@ -24,6 +24,35 @@ stages {
                 }
             }
         }
+     stage('SonarQube Analysis') {
+            steps {
+                echo '===== Running SonarQube code quality scan ====='
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.projectName="Student Management System" \
+                          -Dsonar.java.binaries=target/classes \
+                          -B
+                    '''
+                }
+            }
+        }
+     stage('Quality Gate') {
+            steps {
+                echo '===== Waiting for SonarQube quality gate result ====='
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    stage('Package JAR') {
+            steps {
+                echo '===== Creating final JAR file ====='
+                sh 'mvn package -DskipTests -B'
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
 
 }
 }
