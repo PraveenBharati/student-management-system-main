@@ -13,6 +13,17 @@ stages {
                 checkout scm
             }
         }
+    stage('Build & Unit Tests') {
+            steps {
+                echo '===== Compiling code and running tests ====='
+                sh 'mvn clean test -B'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
 
 }
 }
