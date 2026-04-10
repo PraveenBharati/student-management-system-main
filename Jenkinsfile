@@ -118,7 +118,46 @@ stages {
             }
         }
 
+stage('Update K8s Manifest') {
+            steps {
+                echo '===== Updating image tag in Kubernetes deployment YAML ====='
+                // This updates the deployment.yaml with the new image tag
+                // ArgoCD will detect this change and auto-deploy
+                sh '''
+                    sed -i "s|image: .*student-management.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|g" \
+                      k8s/deployment.yaml
+                '''
 
+                // Commit and push updated manifest back to GitHub
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-credentials',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_PASS'
+                )]) {
+                    sh '''
+                        git config user.email "jenkins@devops.com"
+                        git config user.name "Jenkins CI"
+                        git add k8s/deployment.yaml
+                        git commit -m "CI: Update image tag to ${IMAGE_TAG} [skip ci]"
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/${GIT_USER}/student-management-system-main.git HEAD:main
+                    '''
+                }
+            }
+        }
+}
+     post {
+        success {
+            echo '===== Pipeline completed successfully! ArgoCD will now deploy. ====='
+        }
+        failure {
+            echo '===== Pipeline FAILED. Check the logs above. ====='
+        }
+        always {
+            // Clean up local Docker images to save disk space
+            sh 'docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true'
+            sh 'docker rmi ${IMAGE_NAME}:latest || true'
+        }
+    }
 
 }
-}
+
